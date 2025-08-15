@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // Types for the API response
-interface BadActor {
+interface Case {
   id: number;
   name: string;
   email: string;
@@ -18,7 +18,7 @@ interface BadActor {
   notGuiltyVotes: number;
   lastVotedAt?: string;
   // Computed fields from backend
-  verdictStatus?: string; // "Guilty", "Not Guilty", "On Trial"
+  verdictStatus?: string; // "Guilty", "Not Guilty", "Controversial"
   verdictConfidence?: number; // Percentage confidence
   verdictSummary?: VerdictSummary;
 }
@@ -48,14 +48,14 @@ interface SearchResponse {
   value: string;
   found: boolean;
   message: string;
-  results: BadActor[];
+  results: Case[];
   pagination: Pagination;
 }
 
 interface VoteResponse {
   success: boolean;
   message: string;
-  badActorId: number;
+  caseId: number;
   vote: string;
   verdict: VerdictSummary;
 }
@@ -64,7 +64,7 @@ interface SearchState {
   query: string;
   filter: string;
   isLoading: boolean;
-  results: BadActor[];
+  results: Case[];
   pagination: Pagination | null;
   error: string | null;
   hasSearched: boolean;
@@ -82,8 +82,8 @@ interface UseSearchReturn {
   loadNextPage: () => Promise<void>;
   loadPreviousPage: () => Promise<void>;
   // Voting methods
-  castVote: (badActorId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
-  isVotingInProgress: (badActorId: number) => boolean;
+  castVote: (caseId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
+  isVotingInProgress: (caseId: number) => boolean;
 }
 
 // Configuration
@@ -173,20 +173,20 @@ export const useSearch = (): UseSearchReturn => {
     }
   };
 
-  const castVote = async (badActorId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
+  const castVote = async (caseId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
     // Prevent duplicate votes
-    if (searchState.votingInProgress.has(badActorId)) {
+    if (searchState.votingInProgress.has(caseId)) {
       return false;
     }
 
     // Mark voting as in progress
     setSearchState(prev => ({
       ...prev,
-      votingInProgress: new Set([...prev.votingInProgress, badActorId])
+      votingInProgress: new Set([...prev.votingInProgress, caseId])
     }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/badactor/${badActorId}/vote`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/case/${caseId}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,13 +201,13 @@ export const useSearch = (): UseSearchReturn => {
 
       const voteResponse: VoteResponse = await response.json();
 
-      // Update the badActor in results with new verdict data
+      // Update the case in results with new verdict data
       setSearchState(prev => ({
         ...prev,
-        results: prev.results.map(badActor => {
-          if (badActor.id === badActorId) {
+        results: prev.results.map(caseItem => {
+          if (caseItem.id === caseId) {
             return {
-              ...badActor,
+              ...caseItem,
               verdictScore: voteResponse.verdict.score,
               totalVotes: voteResponse.verdict.totalVotes,
               guiltyVotes: voteResponse.verdict.guiltyVotes,
@@ -216,9 +216,9 @@ export const useSearch = (): UseSearchReturn => {
               lastVotedAt: new Date().toISOString(),
             };
           }
-          return badActor;
+          return caseItem;
         }),
-        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== badActorId))
+        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
       return true;
@@ -229,7 +229,7 @@ export const useSearch = (): UseSearchReturn => {
       // Remove from voting progress
       setSearchState(prev => ({
         ...prev,
-        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== badActorId))
+        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
       // You might want to show an error toast here
@@ -237,8 +237,8 @@ export const useSearch = (): UseSearchReturn => {
     }
   };
 
-  const isVotingInProgress = (badActorId: number): boolean => {
-    return searchState.votingInProgress.has(badActorId);
+  const isVotingInProgress = (caseId: number): boolean => {
+    return searchState.votingInProgress.has(caseId);
   };
 
   const loadNextPage = async () => {
@@ -285,4 +285,4 @@ export const useSearch = (): UseSearchReturn => {
 };
 
 // Export types for use in components
-export type { BadActor, Pagination, SearchResponse, VerdictSummary };
+export type { Case, Pagination, SearchResponse, VerdictSummary }; 

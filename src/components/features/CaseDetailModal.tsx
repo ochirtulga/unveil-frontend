@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { BadActor } from '../../hooks/useSearch';
+import { Case } from '../../hooks/useSearch';
 import { useAuth } from '../context/AuthContext';
 import { LoginPrompt } from './LoginButton';
 
 interface CaseDetailModalProps {
-  case: BadActor;
+  case: Case;
   isOpen: boolean;
   onClose: () => void;
   onVote: (caseId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
@@ -66,7 +66,7 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
   const getVerdictStatus = () => {
     if (scamCase.verdictScore > 0) return 'Guilty';
     if (scamCase.verdictScore < 0) return 'Not Guilty';
-    return 'Pending';
+    return 'Controversial';
   };
 
   const getVerdictColor = () => {
@@ -76,7 +76,7 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
         return 'text-red-700 bg-red-50 border-red-200';
       case 'Not Guilty':
         return 'text-green-700 bg-green-50 border-green-200';
-      case 'Pending':
+      case 'Controversial':
         return 'text-gray-700 bg-gray-50 border-gray-200';
       default:
         return 'text-gray-700 bg-gray-50 border-gray-200';
@@ -205,59 +205,50 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Voting Section - Authentication Required */}
-            {!authState.isAuthenticated ? (
-              <LoginPrompt 
-                onLogin={login}
-                message="Sign in with LinkedIn to vote on this case and help the community determine the verdict."
-              />
-            ) : (
-              <div className="flex items-center justify-center space-x-4 pt-4">
-                <button
-                  onClick={() => handleVote('guilty')}
-                  disabled={isVotingInProgress}
-                  className="flex items-center space-x-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300 disabled:cursor-not-allowed transition-colors font-medium tracking-wide"
-                >
-                  {isVotingInProgress ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  )}
-                  <span>Vote Guilty</span>
-                </button>
-                
-                <button
-                  onClick={() => handleVote('not_guilty')}
-                  disabled={isVotingInProgress}
-                  className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white disabled:bg-green-300 disabled:cursor-not-allowed transition-colors font-medium tracking-wide"
-                >
-                  {isVotingInProgress ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  <span>Vote Not Guilty</span>
-                </button>
-              </div>
-            )}
-
-            {/* Authentication Status Info */}
-            {authState.isAuthenticated && authState.user && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            {/* Voting Section - For now, simplified without authentication */}
+            <div className="flex items-center justify-center space-x-4 pt-4">
+              <button
+                onClick={() => handleVote('guilty')}
+                disabled={isVotingInProgress}
+                className="flex items-center space-x-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300 disabled:cursor-not-allowed transition-colors font-medium tracking-wide rounded-lg"
+              >
+                {isVotingInProgress ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <span className="text-sm text-blue-800 font-light">
-                    Authenticated as {authState.user.firstName} {authState.user.lastName}
-                  </span>
-                </div>
+                )}
+                <span>Vote Guilty</span>
+              </button>
+              
+              <button
+                onClick={() => handleVote('not_guilty')}
+                disabled={isVotingInProgress}
+                className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white disabled:bg-green-300 disabled:cursor-not-allowed transition-colors font-medium tracking-wide rounded-lg"
+              >
+                {isVotingInProgress ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                <span>Vote Not Guilty</span>
+              </button>
+            </div>
+
+            {/* Voting Info */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm text-blue-800 font-light">
+                  Voting is based on IP address. One vote per IP per case.
+                </span>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Timeline Information */}

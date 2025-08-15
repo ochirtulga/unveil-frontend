@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -40,13 +41,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Clean Desktop Navigation */}
           <nav className="hidden md:flex space-x-12">
             {navigationItems.map((item, index) => (
-              <a
+              <Link
                 key={index}
-                href={item.href}
+                to={item.href}
                 className="text-slate-600 hover:text-slate-900 transition-colors font-light tracking-wide text-sm"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -73,14 +74,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="md:hidden border-t border-slate-100 py-4">
             <nav className="space-y-4">
               {navigationItems.map((item, index) => (
-                <a
+                <Link
                   key={index}
-                  href={item.href}
+                  to={item.href}
                   onClick={closeMobileMenu}
                   className="block px-2 py-2 text-slate-700 hover:text-slate-900 transition-colors font-light"
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
@@ -126,5 +127,9 @@ export const Logo: React.FC<LogoProps> = ({
     );
   }
 
-  return logoContent;
+  return (
+    <Link to="/" className="hover:opacity-70 transition-opacity">
+      {logoContent}
+    </Link>
+  );
 };

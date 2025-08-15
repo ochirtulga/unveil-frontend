@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { BadActor, Pagination } from '../../hooks/useSearch';
+import { Case, Pagination } from '../../hooks/useSearch';
 import { CaseDetailModal } from './CaseDetailModal';
 
 interface SearchResultsProps {
-  results: BadActor[];
+  results: Case[];
   pagination: Pagination | null;
   message: string;
   isLoading: boolean;
@@ -29,10 +29,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   isVotingInProgress,
   className = '',
 }) => {
-  const [selectedCase, setSelectedCase] = useState<BadActor | null>(null);
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
 
-  const handleCaseClick = (scamCase: BadActor) => {
-    setSelectedCase(scamCase);
+  const handleCaseClick = (caseItem: Case) => {
+    console.log('Case clicked:', caseItem);
+    setSelectedCase(caseItem);
   };
 
   const handleCloseModal = () => {
@@ -102,10 +103,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {results.map((scamCase, index) => (
+                {results.map((caseItem, index) => (
                   <CaseResultRow 
-                    key={scamCase.id} 
-                    case={scamCase} 
+                    key={caseItem.id} 
+                    case={caseItem} 
                     isEven={index % 2 === 0}
                     onCaseClick={handleCaseClick}
                   />
@@ -141,13 +142,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
 // Individual Case Row Component
 interface CaseResultRowProps {
-  case: BadActor;
+  case: Case;
   isEven: boolean;
-  onCaseClick: (scamCase: BadActor) => void;
+  onCaseClick: (caseItem: Case) => void;
 }
 
 const CaseResultRow: React.FC<CaseResultRowProps> = ({ 
-  case: scamCase, 
+  case: caseItem, 
   isEven, 
   onCaseClick 
 }) => {
@@ -160,28 +161,28 @@ const CaseResultRow: React.FC<CaseResultRowProps> = ({
   };
 
   const getMainIdentifier = () => {
-    return scamCase.name || scamCase.email || scamCase.phone || 'Unknown';
+    return caseItem.name || caseItem.email || caseItem.phone || 'Unknown';
   };
 
   const getContactInfo = () => {
     const contacts = [];
-    if (scamCase.email) contacts.push(scamCase.email);
-    if (scamCase.phone) contacts.push(scamCase.phone);
+    if (caseItem.email) contacts.push(caseItem.email);
+    if (caseItem.phone) contacts.push(caseItem.phone);
     return contacts.join(' • ') || '-';
   };
 
   return (
     <tr 
       className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${isEven ? 'bg-white' : 'bg-slate-25'}`}
-      onClick={() => onCaseClick(scamCase)}
+      onClick={() => onCaseClick(caseItem)}
     >
       <td className="py-4 px-2">
         <div className="font-light text-slate-900">
           {getMainIdentifier()}
         </div>
-        {scamCase.company && (
+        {caseItem.company && (
           <div className="text-xs text-slate-500 font-light mt-1">
-            {scamCase.company}
+            {caseItem.company}
           </div>
         )}
       </td>
@@ -194,17 +195,17 @@ const CaseResultRow: React.FC<CaseResultRowProps> = ({
       
       <td className="py-4 px-2">
         <span className="inline-block px-2 py-1 text-xs font-light text-slate-600 bg-slate-100 tracking-wide">
-          {scamCase.actions}
+          {caseItem.actions}
         </span>
       </td>
       
       <td className="py-4 px-2">
-        <SimpleVerdictBadge case={scamCase} />
+        <SimpleVerdictBadge case={caseItem} />
       </td>
       
       <td className="py-4 px-2">
         <div className="text-sm text-slate-500 font-light">
-          {formatDate(scamCase.createdAt)}
+          {formatDate(caseItem.createdAt)}
         </div>
       </td>
     </tr>
@@ -213,14 +214,14 @@ const CaseResultRow: React.FC<CaseResultRowProps> = ({
 
 // Simplified Verdict Badge Component
 interface SimpleVerdictBadgeProps {
-  case: BadActor;
+  case: Case;
 }
 
-const SimpleVerdictBadge: React.FC<SimpleVerdictBadgeProps> = ({ case: scamCase }) => {
+const SimpleVerdictBadge: React.FC<SimpleVerdictBadgeProps> = ({ case: caseItem }) => {
   const getSimpleVerdict = () => {
-    if (scamCase.verdictScore > 0) return 'Guilty';
-    if (scamCase.verdictScore < 0) return 'Not Guilty';
-    return 'Pending'; // Instead of "On Trial"
+    if (caseItem.verdictScore > 0) return 'Guilty';
+    if (caseItem.verdictScore < 0) return 'Not Guilty';
+    return 'Controversial'; // Instead of "On Trial"
   };
 
   const getVerdictStyle = () => {
@@ -230,7 +231,7 @@ const SimpleVerdictBadge: React.FC<SimpleVerdictBadgeProps> = ({ case: scamCase 
         return 'bg-red-100 text-red-800 border-red-200';
       case 'Not Guilty':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'Pending':
+      case 'Controversial':
         return 'bg-gray-100 text-gray-600 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -244,9 +245,9 @@ const SimpleVerdictBadge: React.FC<SimpleVerdictBadgeProps> = ({ case: scamCase 
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium border ${getVerdictStyle()}`}>
         {verdict}
       </span>
-      {scamCase.totalVotes > 0 && (
+      {caseItem.totalVotes > 0 && (
         <div className="text-xs text-slate-500 font-light">
-          {scamCase.totalVotes} {scamCase.totalVotes === 1 ? 'vote' : 'votes'}
+          {caseItem.totalVotes} {caseItem.totalVotes === 1 ? 'vote' : 'votes'}
         </div>
       )}
     </div>

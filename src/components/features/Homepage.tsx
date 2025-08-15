@@ -25,7 +25,7 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
   };
 
   const handleCaseClick = (report: any) => {
-    console.log('Case clicked:', report);
+    console.log('Case clicked from recent reports:', report);
     // TODO: Navigate to case details or show modal
   };
 
@@ -76,7 +76,7 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
               </div>
 
               {/* Simplified footer info */}
-              <MinimalFooterInfo className="mt-20" />
+              {/* <MinimalFooterInfo className="mt-20" /> */}
             </>
           )}
         </div>
