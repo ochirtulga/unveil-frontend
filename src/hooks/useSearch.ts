@@ -11,6 +11,25 @@ interface BadActor {
   description?: string;
   reportedBy?: string;
   createdAt: string;
+  // Verdict system fields
+  verdictScore: number;
+  totalVotes: number;
+  guiltyVotes: number;
+  notGuiltyVotes: number;
+  lastVotedAt?: string;
+  // Computed fields from backend
+  verdictStatus?: string; // "Guilty", "Not Guilty", "On Trial"
+  verdictConfidence?: number; // Percentage confidence
+  verdictSummary?: VerdictSummary;
+}
+
+interface VerdictSummary {
+  status: string;
+  score: number;
+  totalVotes: number;
+  guiltyVotes: number;
+  notGuiltyVotes: number;
+  confidence: number;
 }
 
 interface Pagination {
@@ -33,6 +52,14 @@ interface SearchResponse {
   pagination: Pagination;
 }
 
+interface VoteResponse {
+  success: boolean;
+  message: string;
+  badActorId: number;
+  vote: string;
+  verdict: VerdictSummary;
+}
+
 interface SearchState {
   query: string;
   filter: string;
@@ -42,6 +69,8 @@ interface SearchState {
   error: string | null;
   hasSearched: boolean;
   lastSearchMessage: string;
+  // Voting state
+  votingInProgress: Set<number>;
 }
 
 interface UseSearchReturn {
@@ -52,6 +81,9 @@ interface UseSearchReturn {
   resetSearch: () => void;
   loadNextPage: () => Promise<void>;
   loadPreviousPage: () => Promise<void>;
+  // Voting methods
+  castVote: (badActorId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
+  isVotingInProgress: (badActorId: number) => boolean;
 }
 
 // Configuration
@@ -67,6 +99,7 @@ export const useSearch = (): UseSearchReturn => {
     error: null,
     hasSearched: false,
     lastSearchMessage: '',
+    votingInProgress: new Set(),
   });
 
   const updateQuery = (query: string) => {
@@ -140,6 +173,74 @@ export const useSearch = (): UseSearchReturn => {
     }
   };
 
+  const castVote = async (badActorId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
+    // Prevent duplicate votes
+    if (searchState.votingInProgress.has(badActorId)) {
+      return false;
+    }
+
+    // Mark voting as in progress
+    setSearchState(prev => ({
+      ...prev,
+      votingInProgress: new Set([...prev.votingInProgress, badActorId])
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/badactor/${badActorId}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vote }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cast vote');
+      }
+
+      const voteResponse: VoteResponse = await response.json();
+
+      // Update the badActor in results with new verdict data
+      setSearchState(prev => ({
+        ...prev,
+        results: prev.results.map(badActor => {
+          if (badActor.id === badActorId) {
+            return {
+              ...badActor,
+              verdictScore: voteResponse.verdict.score,
+              totalVotes: voteResponse.verdict.totalVotes,
+              guiltyVotes: voteResponse.verdict.guiltyVotes,
+              notGuiltyVotes: voteResponse.verdict.notGuiltyVotes,
+              verdictSummary: voteResponse.verdict,
+              lastVotedAt: new Date().toISOString(),
+            };
+          }
+          return badActor;
+        }),
+        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== badActorId))
+      }));
+
+      return true;
+
+    } catch (error) {
+      console.error('Vote error:', error);
+      
+      // Remove from voting progress
+      setSearchState(prev => ({
+        ...prev,
+        votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== badActorId))
+      }));
+
+      // You might want to show an error toast here
+      return false;
+    }
+  };
+
+  const isVotingInProgress = (badActorId: number): boolean => {
+    return searchState.votingInProgress.has(badActorId);
+  };
+
   const loadNextPage = async () => {
     if (!searchState.pagination?.hasNext) return;
     
@@ -166,6 +267,7 @@ export const useSearch = (): UseSearchReturn => {
       error: null,
       hasSearched: false,
       lastSearchMessage: '',
+      votingInProgress: new Set(),
     });
   };
 
@@ -177,8 +279,10 @@ export const useSearch = (): UseSearchReturn => {
     resetSearch,
     loadNextPage,
     loadPreviousPage,
+    castVote,
+    isVotingInProgress,
   };
 };
 
 // Export types for use in components
-export type { BadActor, Pagination, SearchResponse };
+export type { BadActor, Pagination, SearchResponse, VerdictSummary };

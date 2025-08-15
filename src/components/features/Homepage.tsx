@@ -12,7 +12,7 @@ interface HomepageProps {
 }
 
 export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
-  const { searchState, updateQuery, updateFilter, performSearch, loadNextPage, loadPreviousPage } = useSearch();
+  const { searchState, updateQuery, updateFilter, performSearch, loadNextPage, loadPreviousPage, castVote, isVotingInProgress } = useSearch();
 
   const handlePopularSearchSelect = (search: string) => {
     updateQuery(search);
@@ -24,9 +24,9 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
     updateFilter('all');
   };
 
-  const handleReportClick = (report: any) => {
-    console.log('Report clicked:', report);
-    // TODO: Navigate to report details or show modal
+  const handleCaseClick = (report: any) => {
+    console.log('Case clicked:', report);
+    // TODO: Navigate to case details or show modal
   };
 
   // Show search results if we have searched or are searching
@@ -61,6 +61,8 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
               hasSearched={searchState.hasSearched}
               onNextPage={loadNextPage}
               onPreviousPage={loadPreviousPage}
+              onVote={castVote}
+              isVotingInProgress={isVotingInProgress}
               className="mb-12"
             />
           )}
@@ -70,7 +72,7 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
             <>
               <div className="grid md:grid-cols-2 gap-16 max-w-4xl mx-auto">
                 <PopularSearches onSearchSelect={handlePopularSearchSelect} />
-                <RecentReports onReportClick={handleReportClick} />
+                <RecentReports onReportClick={handleCaseClick} />
               </div>
 
               {/* Simplified footer info */}
@@ -93,13 +95,13 @@ const MinimalFooterInfo: React.FC<MinimalFooterInfoProps> = ({ className = '' })
     <div className={`text-center ${className}`}>
       <div className="max-w-md mx-auto">
         <p className="text-sm text-slate-500 font-light leading-relaxed">
-          Trusted by communities worldwide to verify suspicious contacts and protect against fraud.
+          Trusted by communities worldwide to verify suspicious cases and protect against fraud.
         </p>
         
         <div className="flex items-center justify-center space-x-8 mt-6">
           <div className="text-center">
             <div className="text-xl font-light text-slate-900 mb-1">50,000+</div>
-            <div className="text-xs text-slate-500 font-light tracking-wide">VERIFIED REPORTS</div>
+            <div className="text-xs text-slate-500 font-light tracking-wide">VERIFIED CASES</div>
           </div>
           <div className="text-center">
             <div className="text-xl font-light text-slate-900 mb-1">1M+</div>
