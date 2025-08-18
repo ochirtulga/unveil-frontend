@@ -91,7 +91,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           </div>
 
           {/* Simplified Cases Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-y-auto max-h-[850px]">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
