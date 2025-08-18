@@ -1,4 +1,20 @@
+// src/hooks/useSearch.ts - Quick fix version
 import { useState } from 'react';
+import { useToast } from '../components/context/ToastContext';
+import { validateSearchQuery, sanitizeInput } from '../utils/validation';
+
+// Optional verification context - won't break if provider is missing
+let useVerification: any;
+try {
+  const { useVerification: useVerificationImport } = require('../components/context/VerificationContext');
+  useVerification = useVerificationImport;
+} catch {
+  // Fallback if VerificationContext doesn't exist
+  useVerification = () => ({
+    verificationState: { isVerified: false, email: null, verificationToken: null },
+    isVerificationRequired: () => true
+  });
+}
 
 // Types for the API response
 interface Case {
@@ -84,12 +100,29 @@ interface UseSearchReturn {
   // Voting methods
   castVote: (caseId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
   isVotingInProgress: (caseId: number) => boolean;
+  // Verification methods
+  checkVerificationRequired: () => boolean;
 }
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const useSearch = (): UseSearchReturn => {
+  const { showToast } = useToast();
+  
+  // Safe verification hook usage
+  let verificationState: any = { isVerified: false, email: null, verificationToken: null };
+  let isVerificationRequired = () => true;
+  
+  try {
+    const verification = useVerification();
+    verificationState = verification.verificationState;
+    isVerificationRequired = verification.isVerificationRequired;
+  } catch {
+    // Fallback - no verification available
+    console.log('Verification context not available, falling back to IP-based voting');
+  }
+  
   const [searchState, setSearchState] = useState<SearchState>({
     query: '',
     filter: 'all',
@@ -103,7 +136,8 @@ export const useSearch = (): UseSearchReturn => {
   });
 
   const updateQuery = (query: string) => {
-    setSearchState(prev => ({ ...prev, query, error: null }));
+    const sanitizedQuery = sanitizeInput(query);
+    setSearchState(prev => ({ ...prev, query: sanitizedQuery, error: null }));
   };
 
   const updateFilter = (filter: string) => {
@@ -111,8 +145,10 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const performSearch = async (page: number = 0, size: number = 20) => {
-    if (!searchState.query.trim()) {
-      setSearchState(prev => ({ ...prev, error: 'Please enter a search term' }));
+    // Validate search query
+    const validation = validateSearchQuery(searchState.query, searchState.filter);
+    if (!validation.isValid) {
+      showToast('error', 'Invalid Search', validation.error);
       return;
     }
     
@@ -140,7 +176,17 @@ export const useSearch = (): UseSearchReturn => {
       if (!response.ok) {
         if (response.status === 400) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Invalid search parameters');
+          const errorMessage = errorData.error || 'Invalid search parameters';
+          showToast('error', 'Search Error', errorMessage);
+          throw new Error(errorMessage);
+        }
+        if (response.status === 429) {
+          showToast('warning', 'Rate Limited', 'Too many requests. Please wait a moment and try again.');
+          throw new Error('Rate limited');
+        }
+        if (response.status >= 500) {
+          showToast('error', 'Server Error', 'Our servers are experiencing issues. Please try again later.');
+          throw new Error('Server error');
         }
         throw new Error(`Search failed: ${response.status} ${response.statusText}`);
       }
@@ -155,14 +201,27 @@ export const useSearch = (): UseSearchReturn => {
         lastSearchMessage: data.message,
         error: null,
       }));
+
+      // Show success message if results found
+      if (data.results.length > 0) {
+        showToast('success', 'Search Complete', data.message);
+      } else {
+        showToast('info', 'No Results', 'No matching cases found for your search.');
+      }
       
     } catch (error) {
       console.error('Search error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred while searching';
+      
+      // Only show toast if we haven't already shown one above
+      if (error instanceof Error && !error.message.includes('Rate limited') && 
+          !error.message.includes('Server error') && !error.message.includes('Invalid search parameters')) {
+        const errorMessage = 'An unexpected error occurred while searching. Please try again.';
+        showToast('error', 'Search Failed', errorMessage);
+      }
       
       setSearchState(prev => ({
         ...prev,
-        error: errorMessage,
+        error: error instanceof Error ? error.message : 'Search failed',
         results: [],
         pagination: null,
         hasSearched: true,
@@ -174,8 +233,20 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const castVote = async (caseId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
+    // Check if verification is required (if verification system is available)
+    try {
+      if (isVerificationRequired()) {
+        showToast('warning', 'Verification Required', 'Please verify your email address to vote on cases.');
+        return false;
+      }
+    } catch {
+      // No verification system available, continue with IP-based voting
+      showToast('info', 'Voting', 'Voting with IP-based verification...');
+    }
+
     // Prevent duplicate votes
     if (searchState.votingInProgress.has(caseId)) {
+      showToast('warning', 'Vote in Progress', 'Please wait for your previous vote to complete.');
       return false;
     }
 
@@ -186,17 +257,51 @@ export const useSearch = (): UseSearchReturn => {
     }));
 
     try {
+      // Include verification token in request if available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (verificationState.verificationToken) {
+        headers['Authorization'] = `Bearer ${verificationState.verificationToken}`;
+      }
+
+      const bodyData: any = { vote };
+      if (verificationState.email) {
+        bodyData.email = verificationState.email;
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/case/${caseId}/vote`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ vote }),
+        headers,
+        body: JSON.stringify(bodyData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to cast vote');
+        if (response.status === 400) {
+          const errorData = await response.json();
+          if (errorData.error?.includes('already voted')) {
+            showToast('warning', 'Already Voted', 'You have already voted on this case.');
+          } else if (errorData.error?.includes('verification')) {
+            showToast('error', 'Verification Failed', 'Your verification has expired. Please verify your email again.');
+          } else {
+            showToast('error', 'Invalid Vote', errorData.error || 'Unable to cast vote.');
+          }
+          return false;
+        }
+        if (response.status === 401) {
+          showToast('error', 'Unauthorized', 'Your verification has expired. Please verify your email again.');
+          return false;
+        }
+        if (response.status === 429) {
+          showToast('warning', 'Rate Limited', 'Too many vote attempts. Please wait a moment.');
+          return false;
+        }
+        if (response.status >= 500) {
+          showToast('error', 'Server Error', 'Unable to process vote due to server issues.');
+          return false;
+        }
+        throw new Error(`Vote failed: ${response.status}`);
       }
 
       const voteResponse: VoteResponse = await response.json();
@@ -221,6 +326,10 @@ export const useSearch = (): UseSearchReturn => {
         votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
+      // Show success message
+      const voteText = vote === 'guilty' ? 'Guilty' : 'Not Guilty';
+      showToast('success', 'Vote Recorded', `Your "${voteText}" vote has been recorded successfully.`);
+
       return true;
 
     } catch (error) {
@@ -232,7 +341,11 @@ export const useSearch = (): UseSearchReturn => {
         votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
-      // You might want to show an error toast here
+      // Show generic error if we haven't shown a specific one
+      if (error instanceof Error && !error.message.includes('Vote failed')) {
+        showToast('error', 'Vote Failed', 'Unable to record your vote. Please try again.');
+      }
+
       return false;
     }
   };
@@ -241,8 +354,19 @@ export const useSearch = (): UseSearchReturn => {
     return searchState.votingInProgress.has(caseId);
   };
 
+  const checkVerificationRequired = (): boolean => {
+    try {
+      return isVerificationRequired();
+    } catch {
+      return false; // No verification system available
+    }
+  };
+
   const loadNextPage = async () => {
-    if (!searchState.pagination?.hasNext) return;
+    if (!searchState.pagination?.hasNext) {
+      showToast('info', 'Last Page', 'You are already on the last page of results.');
+      return;
+    }
     
     const nextPage = searchState.pagination.currentPage + 1;
     const pageSize = searchState.pagination.pageSize;
@@ -250,7 +374,10 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const loadPreviousPage = async () => {
-    if (!searchState.pagination?.hasPrevious) return;
+    if (!searchState.pagination?.hasPrevious) {
+      showToast('info', 'First Page', 'You are already on the first page of results.');
+      return;
+    }
     
     const prevPage = searchState.pagination.currentPage - 1;
     const pageSize = searchState.pagination.pageSize;
@@ -269,6 +396,7 @@ export const useSearch = (): UseSearchReturn => {
       lastSearchMessage: '',
       votingInProgress: new Set(),
     });
+    showToast('info', 'Search Reset', 'Search has been cleared.');
   };
 
   return {
@@ -281,8 +409,9 @@ export const useSearch = (): UseSearchReturn => {
     loadPreviousPage,
     castVote,
     isVotingInProgress,
+    checkVerificationRequired,
   };
 };
 
 // Export types for use in components
-export type { Case, Pagination, SearchResponse, VerdictSummary }; 
+export type { Case, Pagination, SearchResponse, VerdictSummary };

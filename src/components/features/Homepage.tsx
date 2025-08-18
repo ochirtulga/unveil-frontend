@@ -12,7 +12,17 @@ interface HomepageProps {
 }
 
 export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
-  const { searchState, updateQuery, updateFilter, performSearch, loadNextPage, loadPreviousPage, castVote, isVotingInProgress } = useSearch();
+  const { 
+    searchState, 
+    updateQuery, 
+    updateFilter, 
+    performSearch, 
+    loadNextPage, 
+    loadPreviousPage, 
+    castVote, 
+    isVotingInProgress,
+    checkVerificationRequired
+  } = useSearch();
 
   const handlePopularSearchSelect = (search: string) => {
     updateQuery(search);
@@ -70,10 +80,10 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
           {/* Content Grid - only show when not displaying search results */}
           {!showSearchResults && (
             <>
-              <div className="grid md:grid-cols-2 gap-16 max-w-4xl mx-auto">
+              {/* <div className="grid md:grid-cols-2 gap-16 max-w-4xl mx-auto">
                 <PopularSearches onSearchSelect={handlePopularSearchSelect} />
                 <RecentReports onReportClick={handleCaseClick} />
-              </div>
+              </div> */}
 
               {/* Simplified footer info */}
               {/* <MinimalFooterInfo className="mt-20" /> */}

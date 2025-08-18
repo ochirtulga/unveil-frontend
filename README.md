@@ -224,7 +224,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For support and questions:
 - Email: support@unveil.com
-- Issues: [GitHub Issues](https://github.com/your-username/unveil-frontend/issues)
+- Issues: [GitHub Issues](https://github.com/ochirtulga/unveil-frontend/issues)
 
 ---
 
