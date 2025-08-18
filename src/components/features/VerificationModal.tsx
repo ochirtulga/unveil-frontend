@@ -68,10 +68,13 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
   useEffect(() => {
     if (verificationState.isVerified && currentStep === 'code') {
       setCurrentStep('success');
-      setTimeout(() => {
+      // Close modal after showing success for a brief moment
+      const timer = setTimeout(() => {
         onVerified();
         onClose();
-      }, 1500);
+      }, 1000); // Reduced to 1 second for faster UX
+
+      return () => clearTimeout(timer);
     }
   }, [verificationState.isVerified, currentStep, onVerified, onClose]);
 
@@ -108,9 +111,8 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     }
 
     const success = await verifyCode(code);
-    if (success) {
-      setCurrentStep('success');
-    }
+    // If verification is successful, the useEffect above will handle the modal closing
+    // No need to manually handle success here as it's handled by the verification state change
   };
 
   const handleResendCode = async () => {
@@ -166,7 +168,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">Verify Your Email</h3>
                 <p className="text-slate-600 font-light text-sm">
-                  We'll send a verification code to your email to confirm your vote.
+                  We'll send a 6-digit verification code to your email to confirm your vote.
                 </p>
               </div>
 
@@ -293,7 +295,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
               </div>
               <h3 className="text-xl font-medium text-slate-900">Verified!</h3>
               <p className="text-slate-600 font-light">
-                Your email has been verified. You can now vote on cases.
+                Your email has been verified. Closing modal...
               </p>
               <div className="flex justify-center mt-6">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-green-600 border-t-transparent"></div>

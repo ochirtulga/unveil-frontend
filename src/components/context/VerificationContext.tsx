@@ -42,7 +42,7 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
     setVerificationState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/verification/request`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/otp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,12 +59,13 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
           return false;
         }
         if (response.status === 429) {
-          const errorMessage = 'Too many verification requests. Please wait before requesting another code.';
+          const errorData = await response.json();
+          const errorMessage = errorData.error || 'Too many verification requests. Please wait before requesting another code.';
           setVerificationState(prev => ({ ...prev, error: errorMessage, isLoading: false }));
           showToast('warning', 'Rate Limited', errorMessage);
           return false;
         }
-        throw new Error(`Verification request failed: ${response.status}`);
+        throw new Error(`OTP request failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -76,11 +77,11 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
         error: null,
       }));
 
-      showToast('success', 'Verification Code Sent', `Check your email at ${email} for the verification code.`);
+      showToast('success', 'OTP Sent', `Check your email at ${email} for the verification code.`);
       return true;
 
     } catch (error) {
-      console.error('Verification request error:', error);
+      console.error('OTP request error:', error);
       const errorMessage = 'Failed to send verification code. Please try again.';
       
       setVerificationState(prev => ({
@@ -89,7 +90,7 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
         isLoading: false,
       }));
 
-      showToast('error', 'Verification Failed', errorMessage);
+      showToast('error', 'OTP Failed', errorMessage);
       return false;
     }
   }, [showToast]);
@@ -103,14 +104,14 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
     setVerificationState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/verification/verify`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/otp/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: verificationState.email,
-          code: code.trim(),
+          otp: code.trim(),
         }),
       });
 
@@ -121,17 +122,19 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
           
           if (errorData.error?.includes('expired')) {
             errorMessage = 'Verification code has expired. Please request a new one.';
-          } else if (errorData.error?.includes('invalid')) {
+          } else if (errorData.error?.includes('invalid') || errorData.error?.includes('Invalid OTP')) {
             errorMessage = 'Invalid verification code. Please check and try again.';
           } else if (errorData.error?.includes('attempts')) {
             errorMessage = 'Too many failed attempts. Please request a new verification code.';
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
           }
           
           setVerificationState(prev => ({ ...prev, error: errorMessage, isLoading: false }));
           showToast('error', 'Verification Failed', errorMessage);
           return false;
         }
-        throw new Error(`Verification failed: ${response.status}`);
+        throw new Error(`OTP verification failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -148,7 +151,7 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
       return true;
 
     } catch (error) {
-      console.error('Verification error:', error);
+      console.error('OTP verification error:', error);
       const errorMessage = 'Verification failed. Please try again.';
       
       setVerificationState(prev => ({

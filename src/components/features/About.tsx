@@ -94,7 +94,7 @@ export const About: React.FC<AboutProps> = ({ className = '' }) => {
           </section>
 
           {/* Statistics */}
-          <section className="mb-16">
+          {/* <section className="mb-16">
             <div className="bg-slate-50 p-8 rounded-lg">
               <h2 className="text-2xl font-light text-slate-900 mb-8 text-center tracking-wide">
                 Community Impact
@@ -106,7 +106,7 @@ export const About: React.FC<AboutProps> = ({ className = '' }) => {
                 <StatItem number="99.2%" label="Accuracy Rate" />
               </div>
             </div>
-          </section>
+          </section> */}
 
           {/* Team */}
           <section className="mb-16">

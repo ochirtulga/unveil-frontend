@@ -1,20 +1,8 @@
-// src/hooks/useSearch.ts - Quick fix version
+// src/hooks/useSearch.ts
 import { useState } from 'react';
 import { useToast } from '../components/context/ToastContext';
+import { useVerification } from '../components/context/VerificationContext';
 import { validateSearchQuery, sanitizeInput } from '../utils/validation';
-
-// Optional verification context - won't break if provider is missing
-let useVerification: any;
-try {
-  const { useVerification: useVerificationImport } = require('../components/context/VerificationContext');
-  useVerification = useVerificationImport;
-} catch {
-  // Fallback if VerificationContext doesn't exist
-  useVerification = () => ({
-    verificationState: { isVerified: false, email: null, verificationToken: null },
-    isVerificationRequired: () => true
-  });
-}
 
 // Types for the API response
 interface Case {
@@ -73,6 +61,7 @@ interface VoteResponse {
   message: string;
   caseId: number;
   vote: string;
+  verificationMethod?: string;
   verdict: VerdictSummary;
 }
 
@@ -109,19 +98,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const useSearch = (): UseSearchReturn => {
   const { showToast } = useToast();
-  
-  // Safe verification hook usage
-  let verificationState: any = { isVerified: false, email: null, verificationToken: null };
-  let isVerificationRequired = () => true;
-  
-  try {
-    const verification = useVerification();
-    verificationState = verification.verificationState;
-    isVerificationRequired = verification.isVerificationRequired;
-  } catch {
-    // Fallback - no verification available
-    console.log('Verification context not available, falling back to IP-based voting');
-  }
+  const { verificationState, isVerificationRequired } = useVerification();
   
   const [searchState, setSearchState] = useState<SearchState>({
     query: '',
@@ -233,15 +210,10 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const castVote = async (caseId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
-    // Check if verification is required (if verification system is available)
-    try {
-      if (isVerificationRequired()) {
-        showToast('warning', 'Verification Required', 'Please verify your email address to vote on cases.');
-        return false;
-      }
-    } catch {
-      // No verification system available, continue with IP-based voting
-      showToast('info', 'Voting', 'Voting with IP-based verification...');
+    // Check if verification is required
+    if (isVerificationRequired()) {
+      showToast('warning', 'Verification Required', 'Please verify your email address to vote on cases.');
+      return false;
     }
 
     // Prevent duplicate votes
@@ -257,7 +229,7 @@ export const useSearch = (): UseSearchReturn => {
     }));
 
     try {
-      // Include verification token in request if available
+      // Include verification token in request headers
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -291,6 +263,10 @@ export const useSearch = (): UseSearchReturn => {
         }
         if (response.status === 401) {
           showToast('error', 'Unauthorized', 'Your verification has expired. Please verify your email again.');
+          return false;
+        }
+        if (response.status === 409) {
+          showToast('warning', 'Already Voted', 'You have already voted on this case.');
           return false;
         }
         if (response.status === 429) {
@@ -328,7 +304,8 @@ export const useSearch = (): UseSearchReturn => {
 
       // Show success message
       const voteText = vote === 'guilty' ? 'Guilty' : 'Not Guilty';
-      showToast('success', 'Vote Recorded', `Your "${voteText}" vote has been recorded successfully.`);
+      const verificationMethod = voteResponse.verificationMethod || 'email';
+      showToast('success', 'Vote Recorded', `Your "${voteText}" vote has been recorded successfully via ${verificationMethod} verification.`);
 
       return true;
 
@@ -355,11 +332,7 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const checkVerificationRequired = (): boolean => {
-    try {
-      return isVerificationRequired();
-    } catch {
-      return false; // No verification system available
-    }
+    return isVerificationRequired();
   };
 
   const loadNextPage = async () => {
