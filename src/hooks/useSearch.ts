@@ -82,6 +82,7 @@ interface UseSearchReturn {
   updateQuery: (query: string) => void;
   updateFilter: (filter: string) => void;
   performSearch: (page?: number, size?: number) => Promise<void>;
+  loadLatestCases: (page?: number, size?: number) => Promise<void>;
   resetSearch: () => void;
   loadNextPage: () => Promise<void>;
   loadPreviousPage: () => Promise<void>;
@@ -104,7 +105,7 @@ export const useSearch = (): UseSearchReturn => {
     hasSearched: false,
     lastSearchMessage: '',
     votingInProgress: new Set(),
-    isShowingLatest: true
+    isShowingLatest: false,
   });
 
   const updateQuery = (query: string) => {
@@ -123,7 +124,12 @@ export const useSearch = (): UseSearchReturn => {
       return;
     }
     
-    setSearchState(prev => ({ ...prev, isLoading: true, error: null }));
+    setSearchState(prev => ({ 
+      ...prev, 
+      isLoading: true, 
+      error: null, 
+      isShowingLatest: false 
+    }));
     
     try {
       const data: SearchResponse = await apiService.search({
@@ -140,6 +146,7 @@ export const useSearch = (): UseSearchReturn => {
         hasSearched: true,
         lastSearchMessage: data.message,
         error: null,
+        isShowingLatest: false,
       }));
 
       const toastType = data.results.length > 0 ? TOAST_TYPES.SUCCESS : TOAST_TYPES.INFO;
@@ -157,6 +164,54 @@ export const useSearch = (): UseSearchReturn => {
         pagination: null,
         hasSearched: true,
         lastSearchMessage: '',
+        isShowingLatest: false,
+      }));
+    } finally {
+      setSearchState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const loadLatestCases = async (page: number = 0, size: number = config.search.defaultPageSize) => {
+    setSearchState(prev => ({ 
+      ...prev, 
+      isLoading: true, 
+      error: null,
+      hasSearched: false,
+      query: '',
+      filter: 'all'
+    }));
+    
+    try {
+      // Use the dedicated latest cases API method
+      const data: SearchResponse = await apiService.getLatestCases({
+        page,
+        size,
+      });
+      
+      setSearchState(prev => ({
+        ...prev,
+        results: data.results,
+        pagination: data.pagination,
+        hasSearched: true,
+        lastSearchMessage: data.message || `Showing ${data.results.length} latest cases`,
+        error: null,
+        isShowingLatest: true,
+      }));
+
+      // Don't show toast for loading latest cases - it's the default state
+      
+    } catch (error) {
+      console.error('Load latest cases error:', error);
+      const errorMessage = handleApiError(error);
+      
+      setSearchState(prev => ({
+        ...prev,
+        error: errorMessage,
+        results: [],
+        pagination: null,
+        hasSearched: true,
+        lastSearchMessage: '',
+        isShowingLatest: false,
       }));
     } finally {
       setSearchState(prev => ({ ...prev, isLoading: false }));
@@ -235,7 +290,13 @@ export const useSearch = (): UseSearchReturn => {
     
     const nextPage = searchState.pagination.currentPage + 1;
     const pageSize = searchState.pagination.pageSize;
-    await performSearch(nextPage, pageSize);
+    
+    // Continue with current mode (search or latest)
+    if (searchState.isShowingLatest) {
+      await loadLatestCases(nextPage, pageSize);
+    } else {
+      await performSearch(nextPage, pageSize);
+    }
   };
 
   const loadPreviousPage = async () => {
@@ -246,21 +307,25 @@ export const useSearch = (): UseSearchReturn => {
     
     const prevPage = searchState.pagination.currentPage - 1;
     const pageSize = searchState.pagination.pageSize;
-    await performSearch(prevPage, pageSize);
+    
+    // Continue with current mode (search or latest)
+    if (searchState.isShowingLatest) {
+      await loadLatestCases(prevPage, pageSize);
+    } else {
+      await performSearch(prevPage, pageSize);
+    }
   };
 
   const resetSearch = () => {
-    setSearchState({
+    setSearchState(prev => ({
+      ...prev,
       query: '',
       filter: 'all',
-      isLoading: false,
-      results: [],
-      pagination: null,
-      error: null,
       hasSearched: false,
       lastSearchMessage: '',
-      votingInProgress: new Set(),
-    });
+      error: null,
+      isShowingLatest: false,
+    }));
   };
 
   const isVotingInProgress = (caseId: number): boolean => {
@@ -276,6 +341,7 @@ export const useSearch = (): UseSearchReturn => {
     updateQuery,
     updateFilter,
     performSearch,
+    loadLatestCases,
     resetSearch,
     loadNextPage,
     loadPreviousPage,

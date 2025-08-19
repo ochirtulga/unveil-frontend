@@ -83,6 +83,19 @@ class ApiService {
     return this.request(`${config.api.endpoints.search}?${searchParams}`);
   }
 
+  async getLatestCases(params: {
+    page?: number;
+    size?: number;
+  } = {}) {
+    // Use dedicated latest cases endpoint
+    const searchParams = new URLSearchParams({
+      page: (params.page || 0).toString(),
+      size: (params.size || config.search.defaultPageSize).toString(),
+    });
+
+    return this.request(`${config.api.endpoints.latestCases}?${searchParams}`);
+  }
+
   async reportCase(data: any, verificationToken?: string) {
     const headers: Record<string, string> = {};
     

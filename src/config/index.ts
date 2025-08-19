@@ -2,9 +2,10 @@
 export const config = {
     // API Configuration
     api: {
-      baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8080',
+      baseUrl: import.meta.env.VITE_API_URL,
       endpoints: {
         search: '/api/v1/search',
+        latestCases: '/api/v1/cases/latest',
         report: '/api/v1/case/report',
         vote: '/api/v1/case/{id}/vote',
         otpSend: '/api/v1/otp/send',
