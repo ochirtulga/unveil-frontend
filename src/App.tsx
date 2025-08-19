@@ -5,6 +5,7 @@ import { ToastProvider } from './components/context/ToastContext'
 import { VerificationProvider } from './components/context/VerificationContext'
 import { Homepage } from './components/features/Homepage'
 import { About } from './components/features/About'
+import { ReportPage } from './components/features/Reportpage'
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Homepage />} />
               <Route path="/search" element={<div>Search Results Page - Coming Soon</div>} />
-              <Route path="/report" element={<div>Report Scammer Page - Coming Soon</div>} />
+              <Route path="/report" element={<ReportPage />} />
               <Route path="/about" element={<About />} />
               <Route path="/help" element={<div>Help Page - Coming Soon</div>} />
             </Routes>

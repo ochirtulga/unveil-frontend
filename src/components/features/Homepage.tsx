@@ -34,11 +34,6 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
     updateFilter('all');
   };
 
-  const handleCaseClick = (report: any) => {
-    console.log('Case clicked from recent reports:', report);
-    // TODO: Navigate to case details or show modal
-  };
-
   // Show search results if we have searched or are searching
   const showSearchResults = searchState.hasSearched || searchState.isLoading;
 

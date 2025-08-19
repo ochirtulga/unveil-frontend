@@ -32,7 +32,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
 
   const handleCaseClick = (caseItem: Case) => {
-    console.log('Case clicked:', caseItem);
     setSelectedCase(caseItem);
   };
 

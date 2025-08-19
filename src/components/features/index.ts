@@ -6,3 +6,4 @@ export { PopularSearches } from './PopularSearches';
 export { RecentReports } from './RecentReports';
 export { Homepage } from './Homepage';
 export { About } from './About';
+export { ReportPage } from './Reportpage';

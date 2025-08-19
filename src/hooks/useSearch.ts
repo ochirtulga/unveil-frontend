@@ -146,7 +146,6 @@ export const useSearch = (): UseSearchReturn => {
       });
       
       const fullUrl = `${baseUrl}?${params.toString()}`;
-      console.log('Searching:', fullUrl);
 
       const response = await fetch(fullUrl);
       
