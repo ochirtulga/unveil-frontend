@@ -1,6 +1,8 @@
+// src/components/features/SearchForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '../context/ToastContext';
 import { validateSearchQuery } from '../../utils/validation';
+import { FILTER_OPTIONS, TOAST_TYPES } from '../../utils/constants';
 
 interface SearchState {
   query: string;
@@ -15,14 +17,6 @@ interface SearchFormProps {
   onSearch: () => void;
   className?: string;
 }
-
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'All Fields' },
-  { value: 'name', label: 'Name' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'company', label: 'Company' },
-];
 
 export const SearchForm: React.FC<SearchFormProps> = ({
   searchState,
@@ -47,9 +41,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Validate query when it changes
@@ -65,7 +57,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       if (validationError) {
-        showToast('error', 'Invalid Input', validationError);
+        showToast(TOAST_TYPES.ERROR, 'Invalid Input', validationError);
         return;
       }
       onSearch();
@@ -79,25 +71,21 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
   const handleSearchClick = () => {
     if (validationError) {
-      showToast('error', 'Invalid Input', validationError);
+      showToast(TOAST_TYPES.ERROR, 'Invalid Input', validationError);
       return;
     }
     onSearch();
   };
 
   const getPlaceholderText = () => {
-    switch (searchState.filter) {
-      case 'email':
-        return 'Enter email address (e.g., user@example.com)';
-      case 'phone':
-        return 'Enter phone number (e.g., +1-555-123-4567)';
-      case 'name':
-        return 'Enter full name (e.g., John Doe)';
-      case 'company':
-        return 'Enter company name (e.g., Acme Corp)';
-      default:
-        return 'Enter name, email, phone number, or company...';
-    }
+    const placeholders = {
+      email: 'Enter email address (e.g., user@example.com)',
+      phone: 'Enter phone number (e.g., +1-555-123-4567)',
+      name: 'Enter full name (e.g., John Doe)',
+      company: 'Enter company name (e.g., Acme Corp)',
+      all: 'Enter name, email, phone number, or company...',
+    };
+    return placeholders[searchState.filter as keyof typeof placeholders] || placeholders.all;
   };
 
   return (
@@ -116,7 +104,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           } focus:outline-none transition-colors placeholder-slate-400 bg-transparent`}
         />
         
-        {/* Validation error display */}
         {validationError && (
           <div className="absolute top-full left-0 mt-2 text-sm text-red-600 font-light">
             {validationError}
@@ -149,14 +136,14 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   );
 };
 
-// Minimal Filter Dropdown Component
+// Filter Dropdown Component
 interface FilterOption {
   value: string;
   label: string;
 }
 
 interface FilterDropdownProps {
-  options: FilterOption[];
+  options: readonly FilterOption[];
   selectedValue: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -171,10 +158,6 @@ const FilterDropdown = React.forwardRef<HTMLDivElement, FilterDropdownProps>(({
   onSelect,
 }, ref) => {
   const selectedOption = options.find(opt => opt.value === selectedValue) || options[0];
-
-  const handleOptionClick = (value: string) => {
-    onSelect(value);
-  };
 
   return (
     <div className="relative" ref={ref}>
@@ -199,7 +182,7 @@ const FilterDropdown = React.forwardRef<HTMLDivElement, FilterDropdownProps>(({
           {options.map((option) => (
             <button
               key={option.value}
-              onClick={() => handleOptionClick(option.value)}
+              onClick={() => onSelect(option.value)}
               className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors text-sm ${
                 option.value === selectedValue ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-700'
               }`}

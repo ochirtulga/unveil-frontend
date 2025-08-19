@@ -3,9 +3,12 @@ import { useState } from 'react';
 import { useToast } from '../components/context/ToastContext';
 import { useVerification } from '../components/context/VerificationContext';
 import { validateSearchQuery, sanitizeInput } from '../utils/validation';
+import { apiService, handleApiError } from '../services/api';
+import { config } from '../config';
+import { TOAST_TYPES } from '../utils/constants';
 
 // Types for the API response
-interface Case {
+export interface Case {
   id: number;
   name: string;
   email: string;
@@ -15,19 +18,15 @@ interface Case {
   description?: string;
   reportedBy?: string;
   createdAt: string;
-  // Verdict system fields
   verdictScore: number;
   totalVotes: number;
   guiltyVotes: number;
   notGuiltyVotes: number;
   lastVotedAt?: string;
-  // Computed fields from backend
-  verdictStatus?: string; // "Guilty", "Not Guilty", "Controversial"
-  verdictConfidence?: number; // Percentage confidence
   verdictSummary?: VerdictSummary;
 }
 
-interface VerdictSummary {
+export interface VerdictSummary {
   status: string;
   score: number;
   totalVotes: number;
@@ -36,7 +35,7 @@ interface VerdictSummary {
   confidence: number;
 }
 
-interface Pagination {
+export interface Pagination {
   currentPage: number;
   pageSize: number;
   totalPages: number;
@@ -74,8 +73,8 @@ interface SearchState {
   error: string | null;
   hasSearched: boolean;
   lastSearchMessage: string;
-  // Voting state
   votingInProgress: Set<number>;
+  isShowingLatest: boolean;
 }
 
 interface UseSearchReturn {
@@ -86,15 +85,10 @@ interface UseSearchReturn {
   resetSearch: () => void;
   loadNextPage: () => Promise<void>;
   loadPreviousPage: () => Promise<void>;
-  // Voting methods
   castVote: (caseId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
   isVotingInProgress: (caseId: number) => boolean;
-  // Verification methods
   checkVerificationRequired: () => boolean;
 }
-
-// Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export const useSearch = (): UseSearchReturn => {
   const { showToast } = useToast();
@@ -110,6 +104,7 @@ export const useSearch = (): UseSearchReturn => {
     hasSearched: false,
     lastSearchMessage: '',
     votingInProgress: new Set(),
+    isShowingLatest: true
   });
 
   const updateQuery = (query: string) => {
@@ -121,53 +116,22 @@ export const useSearch = (): UseSearchReturn => {
     setSearchState(prev => ({ ...prev, filter, error: null }));
   };
 
-  const performSearch = async (page: number = 0, size: number = 20) => {
-    // Validate search query
+  const performSearch = async (page: number = 0, size: number = config.search.defaultPageSize) => {
     const validation = validateSearchQuery(searchState.query, searchState.filter);
     if (!validation.isValid) {
-      showToast('error', 'Invalid Search', validation.error);
+      showToast(TOAST_TYPES.ERROR, 'Invalid Search', validation.error!);
       return;
     }
     
     setSearchState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // Ensure page and size are numbers
-      const pageNum = Number(page) || 0;
-      const sizeNum = Number(size) || 20;
-      
-      // Build URL manually to avoid issues
-      const baseUrl = `${API_BASE_URL}/api/v1/search`;
-      const params = new URLSearchParams({
+      const data: SearchResponse = await apiService.search({
         filter: searchState.filter,
         value: searchState.query.trim(),
-        page: pageNum.toString(),
-        size: sizeNum.toString()
+        page,
+        size,
       });
-      
-      const fullUrl = `${baseUrl}?${params.toString()}`;
-
-      const response = await fetch(fullUrl);
-      
-      if (!response.ok) {
-        if (response.status === 400) {
-          const errorData = await response.json();
-          const errorMessage = errorData.error || 'Invalid search parameters';
-          showToast('error', 'Search Error', errorMessage);
-          throw new Error(errorMessage);
-        }
-        if (response.status === 429) {
-          showToast('warning', 'Rate Limited', 'Too many requests. Please wait a moment and try again.');
-          throw new Error('Rate limited');
-        }
-        if (response.status >= 500) {
-          showToast('error', 'Server Error', 'Our servers are experiencing issues. Please try again later.');
-          throw new Error('Server error');
-        }
-        throw new Error(`Search failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const data: SearchResponse = await response.json();
       
       setSearchState(prev => ({
         ...prev,
@@ -178,26 +142,17 @@ export const useSearch = (): UseSearchReturn => {
         error: null,
       }));
 
-      // Show success message if results found
-      if (data.results.length > 0) {
-        showToast('success', 'Search Complete', data.message);
-      } else {
-        showToast('info', 'No Results', 'No matching cases found for your search.');
-      }
+      const toastType = data.results.length > 0 ? TOAST_TYPES.SUCCESS : TOAST_TYPES.INFO;
+      const toastMessage = data.results.length > 0 ? data.message : 'No matching cases found';
+      showToast(toastType, 'Search Complete', toastMessage);
       
     } catch (error) {
       console.error('Search error:', error);
-      
-      // Only show toast if we haven't already shown one above
-      if (error instanceof Error && !error.message.includes('Rate limited') && 
-          !error.message.includes('Server error') && !error.message.includes('Invalid search parameters')) {
-        const errorMessage = 'An unexpected error occurred while searching. Please try again.';
-        showToast('error', 'Search Failed', errorMessage);
-      }
+      const errorMessage = handleApiError(error);
       
       setSearchState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Search failed',
+        error: errorMessage,
         results: [],
         pagination: null,
         hasSearched: true,
@@ -209,77 +164,28 @@ export const useSearch = (): UseSearchReturn => {
   };
 
   const castVote = async (caseId: number, vote: 'guilty' | 'not_guilty'): Promise<boolean> => {
-    // Check if verification is required
     if (isVerificationRequired()) {
-      showToast('warning', 'Verification Required', 'Please verify your email address to vote on cases.');
+      showToast(TOAST_TYPES.WARNING, 'Verification Required', 'Please verify your email address to vote on cases.');
       return false;
     }
 
-    // Prevent duplicate votes
     if (searchState.votingInProgress.has(caseId)) {
-      showToast('warning', 'Vote in Progress', 'Please wait for your previous vote to complete.');
+      showToast(TOAST_TYPES.WARNING, 'Vote in Progress', 'Please wait for your previous vote to complete.');
       return false;
     }
 
-    // Mark voting as in progress
     setSearchState(prev => ({
       ...prev,
       votingInProgress: new Set([...prev.votingInProgress, caseId])
     }));
 
     try {
-      // Include verification token in request headers
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (verificationState.verificationToken) {
-        headers['Authorization'] = `Bearer ${verificationState.verificationToken}`;
-      }
-
-      const bodyData: any = { vote };
-      if (verificationState.email) {
-        bodyData.email = verificationState.email;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/case/${caseId}/vote`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(bodyData),
-      });
-
-      if (!response.ok) {
-        if (response.status === 400) {
-          const errorData = await response.json();
-          if (errorData.error?.includes('already voted')) {
-            showToast('warning', 'Already Voted', 'You have already voted on this case.');
-          } else if (errorData.error?.includes('verification')) {
-            showToast('error', 'Verification Failed', 'Your verification has expired. Please verify your email again.');
-          } else {
-            showToast('error', 'Invalid Vote', errorData.error || 'Unable to cast vote.');
-          }
-          return false;
-        }
-        if (response.status === 401) {
-          showToast('error', 'Unauthorized', 'Your verification has expired. Please verify your email again.');
-          return false;
-        }
-        if (response.status === 409) {
-          showToast('warning', 'Already Voted', 'You have already voted on this case.');
-          return false;
-        }
-        if (response.status === 429) {
-          showToast('warning', 'Rate Limited', 'Too many vote attempts. Please wait a moment.');
-          return false;
-        }
-        if (response.status >= 500) {
-          showToast('error', 'Server Error', 'Unable to process vote due to server issues.');
-          return false;
-        }
-        throw new Error(`Vote failed: ${response.status}`);
-      }
-
-      const voteResponse: VoteResponse = await response.json();
+      const voteResponse: VoteResponse = await apiService.vote(
+        caseId,
+        vote,
+        verificationState.email || undefined,
+        verificationState.verificationToken || undefined
+      );
 
       // Update the case in results with new verdict data
       setSearchState(prev => ({
@@ -301,42 +207,29 @@ export const useSearch = (): UseSearchReturn => {
         votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
-      // Show success message
       const voteText = vote === 'guilty' ? 'Guilty' : 'Not Guilty';
       const verificationMethod = voteResponse.verificationMethod || 'email';
-      showToast('success', 'Vote Recorded', `Your "${voteText}" vote has been recorded successfully via ${verificationMethod} verification.`);
+      showToast(TOAST_TYPES.SUCCESS, 'Vote Recorded', `Your "${voteText}" vote has been recorded successfully via ${verificationMethod} verification.`);
 
       return true;
 
     } catch (error) {
       console.error('Vote error:', error);
       
-      // Remove from voting progress
       setSearchState(prev => ({
         ...prev,
         votingInProgress: new Set([...prev.votingInProgress].filter(id => id !== caseId))
       }));
 
-      // Show generic error if we haven't shown a specific one
-      if (error instanceof Error && !error.message.includes('Vote failed')) {
-        showToast('error', 'Vote Failed', 'Unable to record your vote. Please try again.');
-      }
-
+      const errorMessage = handleApiError(error);
+      showToast(TOAST_TYPES.ERROR, 'Vote Failed', errorMessage);
       return false;
     }
   };
 
-  const isVotingInProgress = (caseId: number): boolean => {
-    return searchState.votingInProgress.has(caseId);
-  };
-
-  const checkVerificationRequired = (): boolean => {
-    return isVerificationRequired();
-  };
-
   const loadNextPage = async () => {
     if (!searchState.pagination?.hasNext) {
-      showToast('info', 'Last Page', 'You are already on the last page of results.');
+      showToast(TOAST_TYPES.INFO, 'Last Page', 'You are already on the last page of results.');
       return;
     }
     
@@ -347,7 +240,7 @@ export const useSearch = (): UseSearchReturn => {
 
   const loadPreviousPage = async () => {
     if (!searchState.pagination?.hasPrevious) {
-      showToast('info', 'First Page', 'You are already on the first page of results.');
+      showToast(TOAST_TYPES.INFO, 'First Page', 'You are already on the first page of results.');
       return;
     }
     
@@ -368,7 +261,14 @@ export const useSearch = (): UseSearchReturn => {
       lastSearchMessage: '',
       votingInProgress: new Set(),
     });
-    showToast('info', 'Search Reset', 'Search has been cleared.');
+  };
+
+  const isVotingInProgress = (caseId: number): boolean => {
+    return searchState.votingInProgress.has(caseId);
+  };
+
+  const checkVerificationRequired = (): boolean => {
+    return isVerificationRequired();
   };
 
   return {
@@ -384,6 +284,3 @@ export const useSearch = (): UseSearchReturn => {
     checkVerificationRequired,
   };
 };
-
-// Export types for use in components
-export type { Case, Pagination, SearchResponse, VerdictSummary };

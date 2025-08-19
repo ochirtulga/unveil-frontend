@@ -24,6 +24,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
   const [code, setCode] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Handle escape key press
   useEffect(() => {
@@ -52,6 +53,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       setCode('');
       setEmailError(null);
       setCountdown(0);
+      setIsVerifying(false);
     }
   }, [isOpen]);
 
@@ -64,19 +66,21 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Auto-advance to success when verified
+  // Watch for verification success and handle modal closing
   useEffect(() => {
-    if (verificationState.isVerified && currentStep === 'code') {
+    if (verificationState.isVerified && currentStep === 'code' && isVerifying) {
       setCurrentStep('success');
-      // Close modal after showing success for a brief moment
+      setIsVerifying(false);
+      
+      // Close modal after showing success briefly
       const timer = setTimeout(() => {
         onVerified();
         onClose();
-      }, 1000); // Reduced to 1 second for faster UX
+      }, 1500);
 
       return () => clearTimeout(timer);
     }
-  }, [verificationState.isVerified, currentStep, onVerified, onClose]);
+  }, [verificationState.isVerified, currentStep, isVerifying, onVerified, onClose]);
 
   if (!isOpen) return null;
 
@@ -110,9 +114,13 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       return;
     }
 
+    setIsVerifying(true);
     const success = await verifyCode(code);
-    // If verification is successful, the useEffect above will handle the modal closing
-    // No need to manually handle success here as it's handled by the verification state change
+    
+    if (!success) {
+      setIsVerifying(false);
+    }
+    // If successful, the useEffect above will handle the modal closing
   };
 
   const handleResendCode = async () => {
@@ -188,6 +196,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                     }`}
                     disabled={verificationState.isLoading}
                     required
+                    autoComplete="email"
                   />
                   {emailError && (
                     <p className="mt-2 text-sm text-red-600">{emailError}</p>
@@ -250,18 +259,19 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="000000"
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-center text-2xl font-mono tracking-widest"
-                    disabled={verificationState.isLoading}
+                    disabled={verificationState.isLoading || isVerifying}
                     maxLength={6}
                     required
+                    autoComplete="one-time-code"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={verificationState.isLoading || code.length !== 6}
+                  disabled={verificationState.isLoading || isVerifying || code.length !== 6}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
                 >
-                  {verificationState.isLoading ? (
+                  {(verificationState.isLoading || isVerifying) ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                       <span>Verifying...</span>
@@ -276,7 +286,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                 <p className="text-sm text-slate-600 mb-2">Didn't receive the code?</p>
                 <button
                   onClick={handleResendCode}
-                  disabled={countdown > 0 || verificationState.isLoading}
+                  disabled={countdown > 0 || verificationState.isLoading || isVerifying}
                   className="text-sm text-blue-600 hover:text-blue-700 disabled:text-slate-400 font-medium"
                 >
                   {countdown > 0 ? `Resend in ${formatTime(countdown)}` : 'Resend Code'}
@@ -295,7 +305,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
               </div>
               <h3 className="text-xl font-medium text-slate-900">Verified!</h3>
               <p className="text-slate-600 font-light">
-                Your email has been verified. Closing modal...
+                Your email has been verified successfully.
               </p>
               <div className="flex justify-center mt-6">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-green-600 border-t-transparent"></div>

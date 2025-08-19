@@ -9,6 +9,7 @@ interface SearchResultsProps {
   isLoading: boolean;
   error: string | null;
   hasSearched: boolean;
+  isShowingLatest: boolean;
   onNextPage: () => void;
   onPreviousPage: () => void;
   onVote: (caseId: number, vote: 'guilty' | 'not_guilty') => Promise<boolean>;
@@ -23,6 +24,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   isLoading,
   error,
   hasSearched,
+  isShowingLatest = false,
   onNextPage,
   onPreviousPage,
   onVote,
@@ -39,8 +41,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     setSelectedCase(null);
   };
 
-  // Always show something if we have any search activity
-  if (!hasSearched && !isLoading) {
+  // Show loading, error, or results based on state
+  const shouldShowContent = isLoading || error || results.length > 0 || hasSearched || isShowingLatest;
+
+  if (!shouldShowContent) {
     return null;
   }
 
@@ -51,7 +55,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         <div className="text-center py-16">
           <div className="inline-flex items-center space-x-3">
             <div className="animate-spin rounded-full h-5 w-5 border border-slate-300 border-t-slate-900"></div>
-            <span className="text-slate-600 font-light tracking-wide">Searching cases...</span>
+            <span className="text-slate-600 font-light tracking-wide">
+              {isShowingLatest ? 'Loading latest cases...' : 'Searching cases...'}
+            </span>
           </div>
         </div>
       )}
@@ -60,18 +66,27 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       {error && !isLoading && (
         <div className="text-center py-16">
           <div className="max-w-md mx-auto">
-            <p className="text-red-600 font-light mb-2">Search Error</p>
+            <p className="text-red-600 font-light mb-2">
+              {isShowingLatest ? 'Loading Error' : 'Search Error'}
+            </p>
             <p className="text-slate-500 text-sm font-light">{error}</p>
           </div>
         </div>
       )}
 
       {/* No results state */}
-      {!isLoading && !error && results.length === 0 && hasSearched && (
+      {!isLoading && !error && results.length === 0 && (hasSearched || isShowingLatest) && (
         <div className="text-center py-16">
           <div className="max-w-md mx-auto">
-            <p className="text-slate-700 font-light mb-2">No Cases Found</p>
-            <p className="text-slate-500 text-sm font-light">{message}</p>
+            <p className="text-slate-700 font-light mb-2">
+              {isShowingLatest ? 'No Cases Available' : 'No Cases Found'}
+            </p>
+            <p className="text-slate-500 text-sm font-light">
+              {isShowingLatest 
+                ? 'No cases have been reported yet. Be the first to report a case!'
+                : message || 'Try adjusting your search terms or filters.'
+              }
+            </p>
           </div>
         </div>
       )}
@@ -81,7 +96,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         <>
           {/* Results Summary */}
           <div className="mb-8">
-            <p className="text-slate-700 font-light tracking-wide">{message}</p>
+            <p className="text-slate-700 font-light tracking-wide">
+              {message || `Showing ${results.length} ${isShowingLatest ? 'latest cases' : 'search results'}`}
+            </p>
             {pagination && (
               <p className="text-sm text-slate-500 font-light mt-1 tracking-wide">
                 Page {pagination.currentPage + 1} of {pagination.totalPages} • {pagination.totalElements} total cases
