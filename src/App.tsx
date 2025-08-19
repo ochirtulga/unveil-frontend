@@ -15,10 +15,10 @@ function App() {
           <div className="App">
             <Routes>
               <Route path="/" element={<Homepage />} />
-              <Route path="/search" element={<div>Search Results Page - Coming Soon</div>} />
+              {/* <Route path="/search" element={<div>Search Results Page - Coming Soon</div>} /> */}
               <Route path="/report" element={<ReportPage />} />
               <Route path="/about" element={<About />} />
-              <Route path="/help" element={<div>Help Page - Coming Soon</div>} />
+              {/* <Route path="/help" element={<div>Help Page - Coming Soon</div>} /> */}
             </Routes>
           </div>
         </AuthProvider>

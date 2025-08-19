@@ -261,7 +261,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
             {/* Header */}
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-5xl font-light text-slate-900 mb-6 tracking-tight">
-                Report a Scammer
+                Report a Case
               </h1>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
                 Help protect your community by reporting suspicious individuals or organizations. 
@@ -274,7 +274,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
               <form onSubmit={handleSubmit} className="space-y-8">
                 
                 {/* Scammer Information Section */}
-                <FormSection title="Scammer Information" subtitle="Provide any available contact details for the suspected scammer">
+                <FormSection title="Case Information" subtitle="Provide any available contact details for the suspect">
                   
                   <div className="grid md:grid-cols-2 gap-6">
                     <FormField
@@ -330,8 +330,8 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
                   </div>
                 </FormSection>
 
-                {/* Scam Details Section */}
-                <FormSection title="Scam Details" subtitle="Describe the fraudulent activity">
+                {/* Case Details Section */}
+                <FormSection title="Case Details" subtitle="Describe the fraudulent activity">
                   
                   <FormSelect
                     label="Type of Scam"
@@ -346,7 +346,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
                     label="Detailed Description"
                     value={formData.description}
                     onChange={(value) => updateField('description', value)}
-                    placeholder="Describe what happened, how you were contacted, what they asked for, any red flags you noticed, etc. Be as detailed as possible to help others recognize similar scams."
+                    placeholder="Describe what happened, how you were contacted, what they asked for, any red flags you noticed, etc. Be as detailed as possible to help others recognize similar actions."
                     error={formErrors.description}
                     required
                     maxLength={2000}
@@ -384,7 +384,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-9a2 2 0 00-2-2H6a2 2 0 00-2 2v9a2 2 0 002 2zm10-12V6a4 4 0 00-8 0v3" />
                       </svg>
                       <span className="text-sm text-slate-600 font-light">
-                        Your information is used for verification only and will not be publicly displayed.
+                        Your information is used for verification and will be displayed with this case.
                       </span>
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                           </svg>
-                          <span>Submit Report</span>
+                          <span>Submit Case</span>
                         </>
                       )}
                     </button>
@@ -438,7 +438,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ className = '' }) => {
                     )}
 
                     <p className="text-xs text-slate-500 font-light max-w-lg mx-auto">
-                      By submitting this report, you confirm that the information provided is accurate to the best of your knowledge. 
+                      By submitting this case, you confirm that the information provided is accurate to the best of your knowledge. 
                       False reports may result in account restrictions.
                     </p>
                   </div>

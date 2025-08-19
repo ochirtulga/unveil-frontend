@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navigationItems: NavigationItem[] = [
     { label: 'About', href: '/about' },
     { label: 'Report', href: '/report' },
-    { label: 'Help', href: '/help' },
+    // { label: 'Help', href: '/help' },
   ];
 
   const toggleMobileMenu = () => {
