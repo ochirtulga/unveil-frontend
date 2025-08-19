@@ -1,7 +1,6 @@
 // src/components/features/Homepage.tsx
 import React, { useEffect } from 'react';
 import { Layout, Container } from '../layout/Layout';
-import { HeroSection } from './HeroSection';
 import { SearchForm } from './SearchForm';
 import { SearchResults } from './SearchResults';
 import { useSearch } from '../../hooks/useSearch';
@@ -32,11 +31,6 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
     }
   }, []); // Empty dependency array - only run on mount
 
-  const handlePopularSearchSelect = (search: string) => {
-    updateQuery(search);
-    performSearch();
-  };
-
   const handleLogoClick = () => {
     // Reset search state and load latest cases
     resetSearch();
@@ -65,34 +59,14 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
   const currentMode = getCurrentMode();
 
   return (
-    <Layout onLogoClick={handleLogoClick} className={className}>
+    <Layout 
+      onLogoClick={handleLogoClick} 
+      className={className}
+      showHero={true}
+      heroSize={showResults ? 'minimal' : 'full'}
+    >
       <Container size="md">
         <div className="py-16">
-          {/* Minimalistic Hero Section - Always Visible */}
-          <div className="text-center mb-12">
-            {!showResults ? (
-              // Full hero when no results
-              <div>
-                <h1 className="text-5xl md:text-6xl font-light text-slate-900 mb-6 tracking-tight">
-                  Find Out Truth
-                </h1>
-                <p className="text-lg text-slate-600 max-w-xl mx-auto mb-12 font-light leading-relaxed">
-                  Search our comprehensive database to verify suspicious contacts and protect yourself from scams.
-                </p>
-              </div>
-            ) : (
-              // Minimal hero when showing results
-              <div>
-                <h1 className="text-3xl md:text-4xl font-light text-slate-900 mb-4 tracking-tight">
-                  Find Out Truth
-                </h1>
-                <p className="text-sm text-slate-600 max-w-lg mx-auto mb-8 font-light">
-                  Community-driven scam verification platform
-                </p>
-              </div>
-            )}
-          </div>
-          
           {/* Search Form */}
           <SearchForm
             searchState={searchState}
@@ -160,12 +134,10 @@ export const Homepage: React.FC<HomepageProps> = ({ className = '' }) => {
           )}
 
           {/* Content Grid - only show when not displaying any results and not loading */}
-          {!showResults && !searchState.isLoading && (
             <>
               {/* Minimal footer info */}
               <MinimalFooterInfo className="mt-8" />
             </>
-          )}
         </div>
       </Container>
     </Layout>
@@ -185,7 +157,7 @@ const MinimalFooterInfo: React.FC<MinimalFooterInfoProps> = ({ className = '' })
           Trusted by communities worldwide to verify suspicious cases and protect against fraud.
         </p>
         
-        <div className="flex items-center justify-center space-x-8 mt-6">
+        {/* <div className="flex items-center justify-center space-x-8 mt-6">
           <div className="text-center">
             <div className="text-xl font-light text-slate-900 mb-1">50,000+</div>
             <div className="text-xs text-slate-500 font-light tracking-wide">VERIFIED CASES</div>
@@ -194,7 +166,7 @@ const MinimalFooterInfo: React.FC<MinimalFooterInfoProps> = ({ className = '' })
             <div className="text-xl font-light text-slate-900 mb-1">1M+</div>
             <div className="text-xs text-slate-500 font-light tracking-wide">USERS PROTECTED</div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

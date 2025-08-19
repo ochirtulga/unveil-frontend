@@ -1,3 +1,4 @@
+// src/components/layout/Layout.tsx
 import React from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -9,6 +10,8 @@ interface LayoutProps {
   showHeader?: boolean;
   showFooter?: boolean;
   onLogoClick?: () => void;
+  showHero?: boolean;
+  heroSize?: 'full' | 'minimal';
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -18,11 +21,19 @@ export const Layout: React.FC<LayoutProps> = ({
   showHeader = true,
   showFooter = false,
   onLogoClick,
+  showHero = false,
+  heroSize = 'minimal',
 }) => {
   return (
     <div className={`min-h-screen bg-white flex flex-col ${className}`}>
       {/* Header */}
-      {showHeader && <Header onLogoClick={onLogoClick} />}
+      {showHeader && (
+        <Header 
+          onLogoClick={onLogoClick} 
+          showHero={showHero}
+          heroSize={heroSize}
+        />
+      )}
       
       {/* Main Content */}
       <main className={`flex-1 ${containerClassName}`}>
@@ -34,6 +45,7 @@ export const Layout: React.FC<LayoutProps> = ({
     </div>
   );
 };
+
 
 // Container Component
 interface ContainerProps {
