@@ -46,6 +46,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Center: Hero Section */}
+          {showHero && (
+            <div className="flex-1 text-center mx-8 hidden md:block">
+              {heroSize === 'full' ? (
+                <div>
+                  <h1 className="text-3xl lg:text-4xl font-light text-slate-900 mb-2 tracking-tight">
+                    Find Out Truth
+                  </h1>
+                  <p className="text-sm text-slate-600 font-light leading-relaxed">
+                    Search our comprehensive database to verify suspicious contacts
+                  </p>
+                </div>
+              ) : (
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-light text-slate-900 mb-1 tracking-tight">
                     Find Out Truth
@@ -54,6 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
                     Community-driven scam verification
                   </p>
                 </div>
+              )}
+            </div>
+          )}
 
           {/* Right: Desktop Navigation */}
           <nav className="hidden md:flex space-x-8 flex-shrink-0">
@@ -151,7 +166,7 @@ export const Logo: React.FC<LogoProps> = ({
     <div className={`flex items-center ${className}`}>
       {showText && (
         <span className="text-xl font-light text-slate-900 tracking-wide">
-          Unveil
+          UNVEIL
         </span>
       )}
     </div>
