@@ -171,3 +171,29 @@ const MinimalFooterInfo: React.FC<MinimalFooterInfoProps> = ({ className = '' })
     </div>
   );
 };
+
+// Add this to your Homepage or any component to debug verification state
+import { useVerification } from '../context/VerificationContext';
+
+export const DebugVerificationState: React.FC = () => {
+  const { verificationState, clearVerification } = useVerification();
+  
+  return (
+    <div className="fixed bottom-4 right-4 bg-white border border-gray-300 p-4 rounded-lg shadow-lg z-50">
+      <h3 className="font-bold mb-2">Debug Verification State</h3>
+      <div className="text-sm space-y-1">
+        <div>Verified: {verificationState.isVerified ? '✅ Yes' : '❌ No'}</div>
+        <div>Email: {verificationState.email || 'None'}</div>
+        <div>Token: {verificationState.verificationToken ? 'Set' : 'None'}</div>
+        <div>Loading: {verificationState.isLoading ? 'Yes' : 'No'}</div>
+        <div>Error: {verificationState.error || 'None'}</div>
+      </div>
+      <button 
+        onClick={clearVerification}
+        className="mt-2 px-2 py-1 bg-red-500 text-white text-xs rounded"
+      >
+        Clear
+      </button>
+    </div>
+  );
+};

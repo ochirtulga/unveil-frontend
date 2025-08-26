@@ -38,23 +38,26 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
   });
 
   const requestVerification = useCallback(async (email: string): Promise<boolean> => {
-    setVerificationState(prev => ({ ...prev, isLoading: true, error: null }));
+    setVerificationState(prev => {
+      return { ...prev, isLoading: true, error: null };
+    });
 
     try {
       await apiService.sendOTP(email);
       
-      setVerificationState(prev => ({
-        ...prev,
-        email: email.trim().toLowerCase(),
-        isLoading: false,
-        error: null,
-      }));
+      setVerificationState(prev => {
+        return {
+          ...prev,
+          email: email.trim().toLowerCase(),
+          isLoading: false,
+          error: null,
+        };
+      });
 
       showToast(TOAST_TYPES.SUCCESS, 'OTP Sent', `Check your email at ${email} for the verification code.`);
       return true;
 
     } catch (error) {
-      console.error('OTP request error:', error);
       const errorMessage = handleApiError(error);
       
       setVerificationState(prev => ({
@@ -73,25 +76,29 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
       showToast(TOAST_TYPES.ERROR, 'No Email', 'Please request a verification code first.');
       return false;
     }
-
-    setVerificationState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    setVerificationState(prev => {
+      return { ...prev, isLoading: true, error: null };
+    });
 
     try {
       const data = await apiService.verifyOTP(verificationState.email, code);
       
-      setVerificationState(prev => ({
-        ...prev,
-        isVerified: true,
-        verificationToken: data.token,
-        isLoading: false,
-        error: null,
-      }));
+      setVerificationState(prev => {
+        return {
+          ...prev,
+          isVerified: true,
+          verificationToken: data.token,
+          isLoading: false,
+          error: null,
+        };
+      });
 
       showToast(TOAST_TYPES.SUCCESS, 'Verified!', 'Email verified successfully. You can now vote on cases.');
+      
       return true;
 
     } catch (error) {
-      console.error('OTP verification error:', error);
       const errorMessage = handleApiError(error);
       
       setVerificationState(prev => ({
@@ -117,8 +124,13 @@ export const VerificationProvider: React.FC<VerificationProviderProps> = ({ chil
   }, [showToast]);
 
   const isVerificationRequired = useCallback(() => {
-    return !verificationState.isVerified;
+    const required = !verificationState.isVerified;
+    return required;
   }, [verificationState.isVerified]);
+
+  // Debug: Log state changes
+  React.useEffect(() => {
+  }, [verificationState]);
 
   return (
     <VerificationContext.Provider value={{

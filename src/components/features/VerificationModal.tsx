@@ -66,22 +66,6 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Watch for verification success and handle modal closing
-  useEffect(() => {
-    if (verificationState.isVerified && currentStep === 'code' && isVerifying) {
-      setCurrentStep('success');
-      setIsVerifying(false);
-      
-      // Close modal after showing success briefly
-      const timer = setTimeout(() => {
-        onVerified();
-        onClose();
-      }, 1500);
-
-      return () => clearTimeout(timer);
-    }
-  }, [verificationState.isVerified, currentStep, isVerifying, onVerified, onClose]);
-
   if (!isOpen) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -115,12 +99,32 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
     }
 
     setIsVerifying(true);
-    const success = await verifyCode(code);
     
-    if (!success) {
+    try {
+      const success = await verifyCode(code);
+      
+      if (success) {
+        console.log('OTP verification successful, showing success and closing modal');
+        
+        // Show success briefly
+        setCurrentStep('success');
+        setIsVerifying(false);
+        
+        // Close modal after showing success
+        setTimeout(() => {
+          console.log('Closing modal after verification success');
+          onVerified(); // Call the verified callback
+          onClose();    // Close the modal
+        }, 800); // Shorter delay for faster UX
+        
+      } else {
+        console.log('OTP verification failed');
+        setIsVerifying(false);
+      }
+    } catch (error) {
+      console.error('Error during OTP verification:', error);
       setIsVerifying(false);
     }
-    // If successful, the useEffect above will handle the modal closing
   };
 
   const handleResendCode = async () => {
@@ -131,6 +135,11 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       setCountdown(60);
       setCode('');
     }
+  };
+
+  const handleCloseModal = () => {
+    console.log('Manual close of verification modal');
+    onClose();
   };
 
   const formatTime = (seconds: number) => {
@@ -152,7 +161,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
             Email Verification
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="text-slate-400 hover:text-slate-600 transition-colors p-1"
             aria-label="Close modal"
           >
@@ -303,13 +312,10 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-xl font-medium text-slate-900">Verified!</h3>
+              <h3 className="text-xl font-medium text-slate-900">Email Verified!</h3>
               <p className="text-slate-600 font-light">
-                Your email has been verified successfully.
+                You can now vote on cases.
               </p>
-              <div className="flex justify-center mt-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-green-600 border-t-transparent"></div>
-              </div>
             </div>
           )}
 
