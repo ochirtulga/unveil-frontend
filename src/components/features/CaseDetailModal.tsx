@@ -64,13 +64,16 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
   };
 
   const handleVerificationComplete = async () => {
+    console.log('Verification completed, closing modal and executing pending vote');
     setIsVerificationModalOpen(false);
     
-    // If there's a pending vote, execute it now
-    if (pendingVote) {
-      await onVote(scamCase.id, pendingVote);
-      setPendingVote(null);
-    }
+    // Small delay to ensure modal closes before proceeding with vote
+    setTimeout(async () => {
+      if (pendingVote) {
+        await onVote(scamCase.id, pendingVote);
+        setPendingVote(null);
+      }
+    }, 100);
   };
 
   const handleVerificationModalClose = () => {
@@ -180,10 +183,6 @@ export const CaseDetailModal: React.FC<CaseDetailModalProps> = ({
                 )}
                 
                 <CaseInfoField label="Scam Type" value={scamCase.actions} />
-                
-                {scamCase.reportedBy && (
-                  <CaseInfoField label="Reported By" value={scamCase.reportedBy} />
-                )}
               </div>
             </div>
 

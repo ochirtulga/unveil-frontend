@@ -104,7 +104,6 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
       const success = await verifyCode(code);
       
       if (success) {
-        console.log('OTP verification successful, showing success and closing modal');
         
         // Show success briefly
         setCurrentStep('success');
@@ -112,13 +111,11 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
         
         // Close modal after showing success
         setTimeout(() => {
-          console.log('Closing modal after verification success');
           onVerified(); // Call the verified callback
           onClose();    // Close the modal
         }, 800); // Shorter delay for faster UX
         
       } else {
-        console.log('OTP verification failed');
         setIsVerifying(false);
       }
     } catch (error) {
@@ -138,7 +135,6 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
   };
 
   const handleCloseModal = () => {
-    console.log('Manual close of verification modal');
     onClose();
   };
 
